@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dokemon</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+        background:#222; 
+        display:flex; 
+        justify-content:center;
+        align-items:center;
+        min-height:100vh;
+        overflow:hidden;
+        touch-action:none;
+        user-select:none;
+        -webkit-user-select:none;
+        position:relative;
+    }
+    #gameWrapper {
+        position:relative;
+        max-width:1100px;
+        width:100%;
+        height:100vh;
+        max-height:750px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:5px;
+        flex-direction:column;
+    }
+    
+    /* PASEK STATUSU - UKRYTY DOMYŚLNIE */
+    #statusBar {
+        width: 100%;
+        max-width: 1100px;
+        height: 50px;
+        background-image: url('menu.png');
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        position: relative;
+        flex-shrink: 0;
+        border-radius: 8px 8px 0 0;
+        overflow: hidden;
+        margin: 0 auto;
+        display: none;
+    }
+    
+    #statusBar.active {
+        display: block;
+    }
+    
+    #statusBar .status-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 15px;
+        box-sizing: border-box;
+    }
+    
+    .left-section {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        margin-left: 80px;
+        margin-top: 2px;
+    }
+    
+    .right-section {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-right: 50px;
+        margin-top: 2px;
+    }
+    
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 15px;
+        font-weight: bold;
+        color: #4a3520;
+        font-family: 'Courier New', Courier, monospace;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-item .icon {
+        width: 33px;
+        height: 33px;
+        display: block;
+    }
+    
+    .status-item .value {
+        color: #4a3520;
+        min-width: 30px;
+    }
+    .status-item .value.gold { color: #4a3520; }
+    .status-item .value.blue { color: #4a3520; }
+    
+    .stamina-mini {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .stamina-mini-bar {
+        width: 100px;
+        height: 14px;
+        background: rgba(0,0,0,0.3);
+        border: 1px solid rgba(74, 53, 32, 0.3);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-right: -5px;
+    }
+    .stamina-mini-fill {
+        height: 100%;
+        background: #2ecc71;
+        transition: width 0.15s ease, background-color 0.3s ease;
+        border-radius: 3px;
+    }
+    .stamina-mini .value {
+        color: #4a3520;
+        font-size: 13px;
+        min-width: 28px;
+        font-weight: bold;
+    }
+    
+    /* Przyciski - obrazki */
+    .btn-icon {
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        width: 33px;
+        height: 33px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: opacity 0.2s;
+        opacity: 0.7;
+    }
+    .btn-icon:hover {
+        opacity: 1;
+    }
+    .btn-icon img {
+        width: 33px;
+        height: 33px;
+        display: block;
+        pointer-events: none;
+    }
+    
+    #gameContainer { 
+        display:flex;
+        flex-direction:column;
+        position:relative;
+        border:2px solid #333;
+        border-radius:8px;
+        overflow:hidden;
+        width:100%;
+        max-width:1100px;
+        aspect-ratio:1100/700;
+        /* TŁO CAŁEJ GRY - powielana tekstura */
+        background-image: url('background.png');
+        background-size: 220px 220px;
+        background-repeat: repeat;
+    }
+    
+    /* Gdy pasek jest aktywny, gra traci zaokrąglenie u góry */
+    #statusBar.active + #gameContainer {
+        border-radius: 0 0 8px 8px;
+        border-top: none;
+    }
+    
+    #gameCanvas { 
+        display:block;
+        width:100%;
+        height:100%;
+        background:transparent; /* Zmienione z #111 na transparent */
+        touch-action:none;
+        cursor:pointer;
+        image-rendering:pixelated;
+        object-fit:contain;
+    }
+    
+    /* Kontrolery dotykowe - UKRYTE DOMYŚLNIE, POKAZUJĄ SIĘ TYLKO W GRZE */
+    #touchControls {
+        position:absolute;
+        bottom:50px;
+        left:0;
+        right:0;
+        display:none;
+        justify-content:space-between;
+        padding:0 20px;
+        pointer-events:none;
+        z-index:10;
+    }
+    
+    #touchControls.active {
+        display:flex !important;
+    }
+    
+    #joystickZone {
+        width:140px;
+        height:140px;
+        background:rgba(255,255,255,0.12);
+        border-radius:50%;
+        position:relative;
+        pointer-events:auto;
+        touch-action:none;
+        border:2px solid rgba(255,255,255,0.2);
+        backdrop-filter:blur(4px);
+        -webkit-backdrop-filter:blur(4px);
+    }
+    #joystickKnob {
+        width:55px;
+        height:55px;
+        background:rgba(255,255,255,0.4);
+        border-radius:50%;
+        position:absolute;
+        top:50%;
+        left:50%;
+        transform:translate(-50%, -50%);
+        pointer-events:none;
+        border:2px solid rgba(255,255,255,0.5);
+        box-shadow:0 0 20px rgba(255,255,255,0.1);
+        transition:none;
+    }
+    #actionButton {
+        width:90px;
+        height:90px;
+        background:rgba(231,76,60,0.6);
+        border-radius:50%;
+        border:3px solid rgba(255,255,255,0.4);
+        pointer-events:auto;
+        touch-action:none;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        backdrop-filter:blur(4px);
+        -webkit-backdrop-filter:blur(4px);
+        box-shadow:0 0 30px rgba(231,76,60,0.2);
+        overflow:hidden;
+    }
+    #actionButton:active {
+        transform:scale(0.9);
+        background:rgba(192,57,43,0.8);
+    }
+    #actionButton img {
+        width:90px;
+        height:90px;
+        display:block;
+        pointer-events:none;
+        object-fit:contain;
+    }
+</style>
+</head>
+<body>
+
+<div id="gameWrapper">
+    <!-- PASEK STATUSU -->
+    <div id="statusBar">
+        <div class="status-content">
+            <div class="left-section">
+                <div class="status-item">
+                    <img src="monster.png" class="icon" alt="monster">
+                    <span class="value gold" id="statusScore" style="font-size:17px; font-weight:bold;">0/10</span>
+                </div>
+                <div class="status-item">
+                    <img src="time.png" class="icon" alt="time">
+                    <span class="value blue" id="statusTimer" style="font-size:17px; font-weight:bold;">0.00s</span>
+                </div>
+            </div>
+            
+            <div class="right-section">
+                <div class="status-item stamina-mini">
+                    <img src="stamina.png" class="icon" alt="stamina">
+                    <div class="stamina-mini-bar">
+                        <div class="stamina-mini-fill" id="statusStaminaBar" style="width:100%"></div>
+                    </div>
+                    <span class="value" id="statusStaminaText" style="font-size:14px;">100</span>
+                </div>
+                <button class="btn-icon" id="soundToggleStatus">
+                    <img src="sound.png" alt="dźwięk" id="soundIcon">
+                </button>
+                <button class="btn-icon" onclick="resetToMenu()">
+                    <img src="return.png" alt="powrót">
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1100" height="700"></canvas>
+        
+        <div id="touchControls">
+            <div id="joystickZone">
+                <div id="joystickKnob"></div>
+            </div>
+            <div id="actionButton">
+                <img src="sword.png" alt="atak">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DŹWIĘKI -->
+<audio id="bgMusic" loop><source src="moja_melodia.mp3" type="audio/mpeg"></audio>
+<audio id="slashSound"><source src="ciach.mp3" type="audio/mpeg"></audio>
+<audio id="disappearSound"><source src="znikniecie.mp3" type="audio/mpeg"></audio>
+
+<script>
+// ============================================================
+// STEROWANIE DOTYKOWE
+// ============================================================
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const joystickZone = document.getElementById('joystickZone');
+const joystickKnob = document.getElementById('joystickKnob');
+const actionBtn = document.getElementById('actionButton');
+const touchControls = document.getElementById('touchControls');
+
+const keys = { w:false, a:false, s:false, d:false };
+
+// Joystick
+function updateJoystick(e) {
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    const rect = joystickZone.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const maxR = rect.width/2 - 20;
+    let dx = touch.clientX - cx;
+    let dy = touch.clientY - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const clamped = Math.min(dist, maxR);
+    if (dist > 0) {
+        const angle = Math.atan2(dy, dx);
+        const cdx = Math.cos(angle) * clamped;
+        const cdy = Math.sin(angle) * clamped;
+        const normX = cdx / maxR;
+        const normY = cdy / maxR;
+        joystickKnob.style.transform = `translate(calc(-50% + ${cdx}px), calc(-50% + ${cdy}px))`;
+        const t = 0.25;
+        keys.w = normY < -t;
+        keys.s = normY > t;
+        keys.a = normX < -t;
+        keys.d = normX > t;
+    }
+}
+
+function resetJoystick() {
+    joystickActive = false;
+    joystickKnob.style.transform = 'translate(-50%, -50%)';
+    keys.w = false; keys.s = false; keys.a = false; keys.d = false;
+}
+
+let joystickActive = false;
+joystickZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    joystickActive = true;
+    updateJoystick(e);
+}, {passive:false});
+joystickZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (joystickActive) updateJoystick(e);
+}, {passive:false});
+joystickZone.addEventListener('touchend', e => {
+    e.preventDefault();
+    resetJoystick();
+}, {passive:false});
+joystickZone.addEventListener('touchcancel', resetJoystick, {passive:false});
+
+// Myszka
+let mouseJoy = false;
+joystickZone.addEventListener('mousedown', e => {
+    mouseJoy = true;
+    updateJoystick(e);
+});
+document.addEventListener('mousemove', e => {
+    if (mouseJoy) updateJoystick(e);
+});
+document.addEventListener('mouseup', () => {
+    if (mouseJoy) { mouseJoy = false; resetJoystick(); }
+});
+
+// Przycisk ataku
+function doAttack(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = canvas.getBoundingClientRect();
+    const ev = new MouseEvent('mousedown', { 
+        clientX: rect.left + rect.width/2,
+        clientY: rect.top + rect.height/2
+    });
+    canvas.dispatchEvent(ev);
+}
+actionBtn.addEventListener('touchstart', doAttack, {passive:false});
+actionBtn.addEventListener('mousedown', doAttack);
+
+// Klawiatura
+document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+// ============================================================
+// OBSŁUGA DŹWIĘKÓW
+// ============================================================
+let soundEnabled = true;
+const bgMusic = document.getElementById('bgMusic');
+const slashSound = document.getElementById('slashSound');
+const disappearSound = document.getElementById('disappearSound');
+
+const soundIcon = document.getElementById('soundIcon');
+
+document.getElementById('soundToggleStatus').addEventListener('click', function() {
+    soundEnabled = !soundEnabled;
+    soundIcon.src = soundEnabled ? 'sound.png' : 'sound.png';
+    if (!soundEnabled) bgMusic.pause();
+    else bgMusic.play().catch(e => {});
+});
+
+function playSound(audioElement) {
+    if (!soundEnabled) return;
+    try {
+        audioElement.currentTime = 0;
+        audioElement.play().catch(e => {});
+    } catch(e) {}
+}
+
+// ============================================================
+// KOD GRY
+// ============================================================
+const WORLD_WIDTH = 4000;
+const WORLD_HEIGHT = 4000;
+
+// REFERENCJE STATUSU
+const statusBar = document.getElementById('statusBar');
+const statusScore = document.getElementById('statusScore');
+const statusTimer = document.getElementById('statusTimer');
+const statusStaminaBar = document.getElementById('statusStaminaBar');
+const statusStaminaText = document.getElementById('statusStaminaText');
+
+// GRAFIKA
+let useFallbackBg = false;
+const imgBackground = new Image();
+imgBackground.src = "Tlo_4000px.png";
+imgBackground.onerror = () => { useFallbackBg = true; };
+
+const imgTopLayer = new Image();
+imgTopLayer.src = "Tlo_4000px_top.png";
+let useFallbackTop = false;
+imgTopLayer.onerror = () => { useFallbackTop = true; };
+
+const imgLogo = new Image();
+imgLogo.src = "Tla_logo.png";
+let logoLoaded = false;
+imgLogo.onload = () => { logoLoaded = true; };
+imgLogo.onerror = () => { logoLoaded = false; };
+
+const imgFinish = new Image();
+imgFinish.src = "finish.png";
+let finishLoaded = false;
+imgFinish.onload = () => { finishLoaded = true; };
+imgFinish.onerror = () => { finishLoaded = false; };
+
+const imgMenuBg = new Image();
+imgMenuBg.src = "tlowyborupostaci.png";
+
+const imgWybierzBohatera = new Image();
+imgWybierzBohatera.src = "wybierzbohatera.png"; 
+
+const imgImieBohatera = new Image();
+imgImieBohatera.src = "imiebohatera.png"; 
+
+const imgImieBohaterki = new Image();
+imgImieBohaterki.src = "imiebohaterki.png"; 
+
+const imgZnikniecie = new Image();
+imgZnikniecie.src = "znikniecie.png"; 
+
+const imgKlikniecie = new Image();
+imgKlikniecie.src = "klikniecie.png"; 
+
+const imgKulka = new Image();
+imgKulka.src = "kulka.png";
+
+// POKEMONY
+const pokemonImages = [];
+for (let i = 1; i <= 10; i++) {
+    const img = new Image();
+    img.src = "Pokemon" + i + "_48px.png";
+    pokemonImages.push(img);
+}
+
+// POSTACIE
+const imgChlopiecLarge = new Image();
+imgChlopiecLarge.src = "chlopiec.png";
+
+const imgDziewczynaLarge = new Image();
+imgDziewczynaLarge.src = "dziewczyna.png";
+
+const imgRuchChlopca = new Image();
+imgRuchChlopca.src = "ruchchlopca.png";
+
+const imgRuchDziewczyny = new Image();
+imgRuchDziewczyny.src = "ruchdziewczyny.png";
+
+let activePlayerSprite = imgRuchChlopca;
+
+// STANY GRY
+let gameState = 'LOGO';
+
+// KAMERA
+let camera = {
+    x: 0, y: 0,
+    width: 1100,
+    height: 700
+};
+
+// ŚCIANY - TUTAJ WCKLEJ CAŁĄ LISTĘ WALLS
+const walls = [
+    // 1. Zewnętrzne ściany świata
+    { x: 0, y: 0, w: WORLD_WIDTH, h: 30 },
+    { x: 0, y: WORLD_HEIGHT - 30, w: WORLD_WIDTH, h: 30 },
+    { x: 0, y: 0, w: 30, h: WORLD_HEIGHT },
+    { x: WORLD_WIDTH - 30, y: 0, w: 30, h: WORLD_HEIGHT },
+
+    // 2. Twoje przeszkody
+{ x: 23, y: 30, w: 76, h: 190 },
+    { x: 163, y: 284, w: 38, h: 180 },
+    { x: 0, y: 352, w: 165, h: 198 },
+    { x: 207, y: 429, w: 67, h: 115 },
+    { x: 268, y: 158, w: 44, h: 97 },
+    { x: 429, y: 11, w: 123, h: 247 },
+    { x: 664, y: 7, w: 113, h: 246 },
+    { x: 547, y: 11, w: 211, h: 138 },
+    { x: 789, y: 5, w: 213, h: 80 },
+    { x: 914, y: 74, w: 33, h: 102 },
+    { x: 528, y: 543, w: 50, h: 127 },
+    { x: 568, y: 382, w: 11, h: 98 },
+    { x: 592, y: 518, w: 47, h: 82 },
+    { x: 643, y: 554, w: 65, h: 139 },
+    { x: 41, y: 699, w: 43, h: 107 },
+    { x: 147, y: 617, w: 33, h: 74 },
+    { x: 339, y: 601, w: 124, h: 64 },
+    { x: 314, y: 714, w: 15, h: 275 },
+    { x: 242, y: 979, w: 33, h: 22 },
+    { x: 274, y: 1015, w: 45, h: 101 },
+    { x: 194, y: 1044, w: 84, h: 99 },
+    { x: 151, y: 1033, w: 53, h: 94 },
+    { x: 6, y: 861, w: 60, h: 147 },
+    { x: 55, y: 913, w: 73, h: 137 },
+    { x: 122, y: 950, w: 38, h: 131 },
+    { x: 114, y: 1282, w: 60, h: 138 },
+    { x: 351, y: 1076, w: 37, h: 144 },
+    { x: 482, y: 934, w: 53, h: 144 },
+    { x: 605, y: 1080, w: 38, h: 108 },
+    { x: 605, y: 1214, w: 48, h: 25 },
+    { x: 475, y: 1344, w: 36, h: 121 },
+    { x: 331, y: 1607, w: 53, h: 36 },
+    { x: 55, y: 1581, w: 51, h: 121 },
+    { x: 9, y: 1848, w: 89, h: 100 },
+    { x: 22, y: 1966, w: 79, h: 62 },
+    { x: 101, y: 1886, w: 88, h: 89 },
+    { x: 187, y: 1633, w: 12, h: 303 },
+    { x: 198, y: 1608, w: 35, h: 113 },
+    { x: 240, y: 1560, w: 31, h: 116 },
+    { x: 275, y: 1521, w: 33, h: 124 },
+    { x: 293, y: 1330, w: 14, h: 203 },
+    { x: 386, y: 1719, w: 11, h: 254 },
+    { x: 392, y: 1677, w: 48, h: 165 },
+    { x: 437, y: 1639, w: 76, h: 142 },
+    { x: 501, y: 1614, w: 177, h: 113 },
+    { x: 666, y: 1526, w: 46, h: 181 },
+    { x: 814, y: 1463, w: 43, h: 109 },
+    { x: 865, y: 1402, w: 65, h: 90 },
+    { x: 846, y: 1490, w: 39, h: 40 },
+    { x: 319, y: 1922, w: 69, h: 118 },
+    { x: 270, y: 1987, w: 59, h: 109 },
+    { x: 203, y: 2027, w: 73, h: 113 },
+    { x: 160, y: 2082, w: 53, h: 124 },
+    { x: 1, y: 2124, w: 165, h: 105 },
+    { x: 393, y: 2170, w: 29, h: 91 },
+    { x: 58, y: 2526, w: 21, h: 77 },
+    { x: 211, y: 2532, w: 32, h: 102 },
+    { x: 319, y: 2521, w: 21, h: 44 },
+    { x: 404, y: 2569, w: 29, h: 61 },
+    { x: 161, y: 2781, w: 31, h: 15 },
+    { x: 8, y: 2857, w: 210, h: 97 },
+    { x: 210, y: 2856, w: 54, h: 75 },
+    { x: 264, y: 2830, w: 52, h: 83 },
+    { x: 312, y: 2756, w: 51, h: 95 },
+    { x: 356, y: 2711, w: 73, h: 128 },
+    { x: 425, y: 2681, w: 36, h: 110 },
+    { x: 461, y: 2656, w: 33, h: 88 },
+    { x: 495, y: 2629, w: 36, h: 82 },
+    { x: 531, y: 2599, w: 42, h: 88 },
+    { x: 566, y: 2469, w: 10, h: 157 },
+    { x: 570, y: 2449, w: 37, h: 105 },
+    { x: 605, y: 2410, w: 71, h: 131 },
+    { x: 671, y: 2426, w: 77, h: 95 },
+    { x: 749, y: 2409, w: 29, h: 98 },
+    { x: 779, y: 2388, w: 61, h: 86 },
+    { x: 825, y: 2357, w: 52, h: 81 },
+    { x: 857, y: 2256, w: 40, h: 162 },
+    { x: 957, y: 2320, w: 68, h: 103 },
+    { x: 9, y: 3057, w: 131, h: 106 },
+    { x: 138, y: 3033, w: 155, h: 100 },
+    { x: 282, y: 3002, w: 141, h: 96 },
+    { x: 419, y: 2978, w: 75, h: 76 },
+    { x: 479, y: 2896, w: 18, h: 130 },
+    { x: 495, y: 2871, w: 121, h: 78 },
+    { x: 561, y: 2820, w: 96, h: 108 },
+    { x: 78, y: 3411, w: 50, h: 112 },
+    { x: 230, y: 3543, w: 51, h: 138 },
+    { x: 50, y: 3660, w: 87, h: 65 },
+    { x: 362, y: 3843, w: 27, h: 104 },
+    { x: 393, y: 3884, w: 153, h: 83 },
+    { x: 301, y: 3925, w: 99, h: 34 },
+    { x: 671, y: 3786, w: 30, h: 25 },
+    { x: 749, y: 3793, w: 56, h: 30 },
+    { x: 743, y: 3917, w: 99, h: 65 },
+    { x: 966, y: 3852, w: 25, h: 84 },
+    { x: 368, y: 3448, w: 47, h: 49 },
+    { x: 448, y: 3401, w: 124, h: 230 },
+    { x: 369, y: 3289, w: 76, h: 46 },
+    { x: 739, y: 3310, w: 33, h: 101 },
+    { x: 966, y: 3453, w: 33, h: 109 },
+    { x: 664, y: 2942, w: 38, h: 18 },
+    { x: 655, y: 2637, w: 7, h: 185 },
+    { x: 681, y: 2736, w: 23, h: 61 },
+    { x: 670, y: 2622, w: 132, h: 74 },
+    { x: 778, y: 2580, w: 128, h: 103 },
+    { x: 901, y: 2535, w: 46, h: 121 },
+    { x: 710, y: 2593, w: 74, h: 44 },
+    { x: 942, y: 2503, w: 78, h: 83 },
+    { x: 1024, y: 2460, w: 117, h: 107 },
+    { x: 1139, y: 2488, w: 105, h: 82 },
+    { x: 1119, y: 2412, w: 74, h: 25 },
+    { x: 1272, y: 2353, w: 12, h: 25 },
+    { x: 998, y: 1910, w: 32, h: 64 },
+    { x: 852, y: 1822, w: 59, h: 68 },
+    { x: 965, y: 1528, w: 156, h: 89 },
+    { x: 1313, y: 1745, w: 73, h: 42 },
+    { x: 932, y: 1302, w: 217, h: 100 },
+    { x: 963, y: 1277, w: 117, h: 31 },
+    { x: 1025, y: 1216, w: 9, h: 28 },
+    { x: 795, y: 895, w: 176, h: 111 },
+    { x: 903, y: 782, w: 55, h: 131 },
+    { x: 704, y: 680, w: 75, h: 96 },
+    { x: 780, y: 730, w: 14, h: 217 },
+    { x: 880, y: 625, w: 22, h: 149 },
+    { x: 818, y: 599, w: 74, h: 22 },
+    { x: 809, y: 506, w: 40, h: 90 },
+    { x: 843, y: 403, w: 9, h: 120 },
+    { x: 850, y: 382, w: 317, h: 116 },
+    { x: 1166, y: 346, w: 86, h: 130 },
+    { x: 1292, y: 384, w: 26, h: 71 },
+    { x: 980, y: 232, w: 39, h: 22 },
+    { x: 1005, y: 5, w: 296, h: 78 },
+    { x: 1099, y: 96, w: 140, h: 75 },
+    { x: 1372, y: 155, w: 12, h: 17 },
+    { x: 1332, y: 213, w: 31, h: 20 },
+    { x: 1433, y: 276, w: 31, h: 19 },
+    { x: 1374, y: 33, w: 174, h: 32 },
+    { x: 1615, y: 213, w: 30, h: 11 },
+    { x: 1663, y: 58, w: 46, h: 144 },
+    { x: 1761, y: 11, w: 310, h: 90 },
+    { x: 1060, y: 709, w: 33, h: 143 },
+    { x: 1164, y: 596, w: 106, h: 50 },
+    { x: 1376, y: 604, w: 23, h: 69 },
+    { x: 1040, y: 976, w: 53, h: 33 },
+    { x: 1223, y: 1083, w: 17, h: 14 },
+    { x: 1328, y: 1209, w: 11, h: 127 },
+    { x: 1272, y: 1308, w: 115, h: 91 },
+    { x: 1334, y: 1321, w: 168, h: 129 },
+    { x: 1506, y: 1329, w: 144, h: 139 },
+    { x: 1550, y: 1264, w: 50, h: 71 },
+    { x: 1733, y: 1247, w: 43, h: 111 },
+    { x: 1666, y: 1279, w: 76, h: 123 },
+    { x: 1636, y: 1321, w: 59, h: 116 },
+    { x: 1769, y: 1168, w: 15, h: 151 },
+    { x: 1675, y: 1117, w: 64, h: 13 },
+    { x: 1735, y: 1120, w: 18, h: 53 },
+    { x: 1755, y: 1149, w: 16, h: 29 },
+    { x: 1388, y: 1540, w: 34, h: 26 },
+    { x: 1697, y: 1770, w: 43, h: 32 },
+    { x: 1205, y: 2161, w: 25, h: 9 },
+    { x: 1447, y: 2245, w: 23, h: 11 },
+    { x: 1320, y: 2392, w: 61, h: 152 },
+    { x: 1376, y: 2366, w: 53, h: 98 },
+    { x: 1425, y: 2310, w: 186, h: 106 },
+    { x: 1594, y: 2316, w: 141, h: 116 },
+    { x: 1409, y: 2597, w: 329, h: 156 },
+    { x: 1727, y: 2594, w: 60, h: 133 },
+    { x: 1502, y: 2534, w: 271, h: 63 },
+    { x: 1494, y: 2742, w: 229, h: 112 },
+    { x: 1156, y: 2862, w: 105, h: 71 },
+    { x: 889, y: 2992, w: 14, h: 201 },
+    { x: 903, y: 3085, w: 90, h: 150 },
+    { x: 1373, y: 3086, w: 7, h: 55 },
+    { x: 1008, y: 3153, w: 268, h: 137 },
+    { x: 984, y: 3160, w: 28, h: 106 },
+    { x: 1269, y: 3182, w: 155, h: 137 },
+    { x: 1415, y: 3149, w: 43, h: 137 },
+    { x: 1471, y: 3022, w: 33, h: 181 },
+    { x: 1449, y: 3131, w: 32, h: 115 },
+    { x: 1230, y: 3462, w: 87, h: 52 },
+    { x: 1119, y: 3489, w: 27, h: 15 },
+    { x: 1198, y: 3688, w: 37, h: 18 },
+    { x: 1073, y: 3678, w: 27, h: 152 },
+    { x: 1105, y: 3718, w: 79, h: 160 },
+    { x: 1179, y: 3758, w: 291, h: 132 },
+    { x: 1456, y: 3742, w: 98, h: 130 },
+    { x: 1551, y: 3703, w: 53, h: 118 },
+    { x: 1604, y: 3634, w: 72, h: 146 },
+    { x: 1648, y: 3931, w: 46, h: 43 },
+    { x: 1820, y: 3900, w: 33, h: 25 },
+    { x: 1825, y: 3797, w: 37, h: 26 },
+    { x: 1778, y: 3605, w: 143, h: 119 },
+    { x: 1970, y: 3545, w: 55, h: 117 },
+    { x: 1926, y: 3597, w: 54, h: 120 },
+    { x: 2023, y: 3384, w: 14, h: 266 },
+    { x: 1990, y: 3823, w: 60, h: 32 },
+    { x: 1951, y: 3382, w: 27, h: 90 },
+    { x: 1819, y: 3377, w: 47, h: 53 },
+    { x: 1870, y: 3077, w: 9, h: 45 },
+    { x: 1829, y: 2848, w: 13, h: 41 },
+    { x: 2143, y: 2651, w: 11, h: 42 },
+    { x: 2024, y: 2650, w: 68, h: 24 },
+    { x: 1728, y: 2268, w: 86, h: 127 },
+    { x: 1873, y: 2183, w: 21, h: 160 },
+    { x: 1814, y: 2256, w: 70, h: 120 },
+    { x: 1846, y: 2159, w: 34, h: 22 },
+    { x: 1811, y: 2113, w: 37, h: 43 },
+    { x: 1799, y: 2057, w: 11, h: 62 },
+    { x: 1660, y: 2053, w: 136, h: 12 },
+    { x: 1524, y: 1944, w: 71, h: 29 },
+    { x: 1920, y: 1874, w: 68, h: 32 },
+    { x: 1966, y: 2245, w: 33, h: 46 },
+    { x: 2060, y: 2217, w: 32, h: 21 },
+    { x: 2113, y: 2214, w: 28, h: 46 },
+    { x: 2194, y: 2032, w: 10, h: 41 },
+    { x: 2082, y: 1960, w: 24, h: 32 },
+    { x: 1782, y: 1783, w: 31, h: 14 },
+    { x: 1837, y: 1770, w: 36, h: 11 },
+    { x: 1933, y: 1711, w: 17, h: 15 },
+    { x: 1988, y: 1508, w: 14, h: 22 },
+    { x: 1846, y: 1346, w: 67, h: 53 },
+    { x: 1927, y: 1226, w: 40, h: 27 },
+    { x: 1850, y: 1056, w: 7, h: 43 },
+    { x: 1520, y: 609, w: 551, h: 138 },
+    { x: 1985, y: 750, w: 82, h: 143 },
+    { x: 1650, y: 749, w: 258, h: 158 },
+    { x: 1607, y: 532, w: 129, h: 63 },
+    { x: 1625, y: 484, w: 27, h: 66 },
+    { x: 1727, y: 474, w: 336, h: 182 },
+    { x: 1884, y: 315, w: 23, h: 95 },
+    { x: 1812, y: 284, w: 21, h: 32 },
+    { x: 2042, y: 236, w: 128, h: 94 },
+    { x: 2067, y: 8, w: 223, h: 226 },
+    { x: 2108, y: 453, w: 21, h: 44 },
+    { x: 2197, y: 365, w: 20, h: 67 },
+    { x: 2376, y: 117, w: 91, h: 160 },
+    { x: 2476, y: 128, w: 79, h: 141 },
+    { x: 2335, y: 41, w: 40, h: 197 },
+    { x: 2261, y: 7, w: 105, h: 76 },
+    { x: 2367, y: 375, w: 121, h: 60 },
+    { x: 2056, y: 542, w: 206, h: 97 },
+    { x: 2262, y: 620, w: 253, h: 97 },
+    { x: 2504, y: 644, w: 84, h: 111 },
+    { x: 2566, y: 723, w: 163, h: 63 },
+    { x: 2585, y: 684, w: 83, h: 51 },
+    { x: 2630, y: 610, w: 21, h: 40 },
+    { x: 2667, y: 685, w: 39, h: 30 },
+    { x: 2487, y: 489, w: 57, h: 29 },
+    { x: 2260, y: 750, w: 67, h: 17 },
+    { x: 2078, y: 655, w: 113, h: 222 },
+    { x: 2180, y: 827, w: 73, h: 52 },
+    { x: 2236, y: 656, w: 37, h: 54 },
+    { x: 2290, y: 860, w: 38, h: 23 },
+    { x: 2682, y: 896, w: 32, h: 20 },
+    { x: 2716, y: 1100, w: 146, h: 44 },
+    { x: 2902, y: 1153, w: 59, h: 18 },
+    { x: 2318, y: 1126, w: 63, h: 15 },
+    { x: 2418, y: 1247, w: 96, h: 94 },
+    { x: 2517, y: 1259, w: 463, h: 705 },
+    { x: 2323, y: 1334, w: 213, h: 340 },
+    { x: 2258, y: 1473, w: 80, h: 149 },
+    { x: 2372, y: 1653, w: 165, h: 148 },
+    { x: 2470, y: 1807, w: 67, h: 95 },
+    { x: 2321, y: 1718, w: 65, h: 138 },
+    { x: 2244, y: 1750, w: 94, h: 59 },
+    { x: 2631, y: 1934, w: 454, h: 401 },
+    { x: 2631, y: 2578, w: 22, h: 17 },
+    { x: 2390, y: 2676, w: 25, h: 17 },
+    { x: 2569, y: 2838, w: 16, h: 10 },
+    { x: 2630, y: 2901, w: 17, h: 21 },
+    { x: 2454, y: 3157, w: 115, h: 43 },
+    { x: 2197, y: 3197, w: 11, h: 26 },
+    { x: 2140, y: 3198, w: 13, h: 197 },
+    { x: 2114, y: 3285, w: 28, h: 132 },
+    { x: 2037, y: 3354, w: 57, h: 119 },
+    { x: 2085, y: 3324, w: 29, h: 107 },
+    { x: 2165, y: 3579, w: 10, h: 26 },
+    { x: 2119, y: 3941, w: 82, h: 29 },
+    { x: 2266, y: 3908, w: 52, h: 19 },
+    { x: 2353, y: 3767, w: 30, h: 27 },
+    { x: 2529, y: 3812, w: 15, h: 53 },
+    { x: 2570, y: 3618, w: 24, h: 16 },
+    { x: 2469, y: 3482, w: 23, h: 40 },
+    { x: 2370, y: 3479, w: 47, h: 26 },
+    { x: 2644, y: 3438, w: 21, h: 25 },
+    { x: 2656, y: 3623, w: 201, h: 35 },
+    { x: 2895, y: 3765, w: 141, h: 93 },
+    { x: 2770, y: 3934, w: 34, h: 55 },
+    { x: 2846, y: 3945, w: 8, h: 22 },
+    { x: 2880, y: 3970, w: 18, h: 13 },
+    { x: 3001, y: 3964, w: 69, h: 24 },
+    { x: 2794, y: 3222, w: 47, h: 32 },
+    { x: 2723, y: 2971, w: 11, h: 15 },
+    { x: 2646, y: 2985, w: 33, h: 42 },
+    { x: 2891, y: 2883, w: 26, h: 21 },
+    { x: 3001, y: 2908, w: 33, h: 25 },
+    { x: 3053, y: 3017, w: 21, h: 27 },
+    { x: 2999, y: 3136, w: 23, h: 20 },
+    { x: 3196, y: 3180, w: 61, h: 34 },
+    { x: 2649, y: 2843, w: 21, h: 23 },
+    { x: 2652, y: 2341, w: 442, h: 60 },
+    { x: 2661, y: 2311, w: 453, h: 58 },
+    { x: 3050, y: 2400, w: 298, h: 171 },
+    { x: 2834, y: 2391, w: 231, h: 48 },
+    { x: 2921, y: 2389, w: 168, h: 96 },
+    { x: 2979, y: 2462, w: 99, h: 73 },
+    { x: 3086, y: 2256, w: 96, h: 175 },
+    { x: 3187, y: 2292, w: 101, h: 137 },
+    { x: 3300, y: 2372, w: 82, h: 123 },
+    { x: 3342, y: 2456, w: 172, h: 122 },
+    { x: 3513, y: 2257, w: 17, h: 132 },
+    { x: 3086, y: 1935, w: 568, h: 56 },
+    { x: 3279, y: 1972, w: 259, h: 142 },
+    { x: 3321, y: 2109, w: 43, h: 51 },
+    { x: 3411, y: 2105, w: 128, h: 137 },
+    { x: 3516, y: 2240, w: 15, h: 26 },
+    { x: 2978, y: 1771, w: 668, h: 165 },
+    { x: 2959, y: 1688, w: 549, h: 75 },
+    { x: 2950, y: 1743, w: 561, h: 42 },
+    { x: 3215, y: 1489, w: 244, h: 218 },
+    { x: 3109, y: 1286, w: 83, h: 186 },
+    { x: 3188, y: 1315, w: 53, h: 219 },
+    { x: 3242, y: 1358, w: 77, h: 132 },
+    { x: 3321, y: 1395, w: 96, h: 112 },
+    { x: 3118, y: 1252, w: 84, h: 61 },
+    { x: 3195, y: 1285, w: 52, h: 46 },
+    { x: 3247, y: 1333, w: 65, h: 44 },
+    { x: 3316, y: 1351, w: 72, h: 66 },
+    { x: 3400, y: 1425, w: 102, h: 266 },
+    { x: 2977, y: 1560, w: 75, h: 137 },
+    { x: 3046, y: 1589, w: 73, h: 106 },
+    { x: 3111, y: 1629, w: 128, h: 77 },
+    { x: 3189, y: 1518, w: 51, h: 123 },
+    { x: 3155, y: 1457, w: 34, h: 51 },
+    { x: 3225, y: 1119, w: 21, h: 82 },
+    { x: 3230, y: 1198, w: 75, h: 31 },
+    { x: 3303, y: 1234, w: 78, h: 39 },
+    { x: 3378, y: 1257, w: 115, h: 50 },
+    { x: 3128, y: 637, w: 57, h: 32 },
+    { x: 3261, y: 534, w: 105, h: 76 },
+    { x: 3113, y: 512, w: 27, h: 8 },
+    { x: 2786, y: 517, w: 26, h: 57 },
+    { x: 3130, y: 304, w: 53, h: 13 },
+    { x: 2799, y: -1, w: 33, h: 233 },
+    { x: 2707, y: 11, w: 98, h: 80 },
+    { x: 2649, y: 171, w: 46, h: 36 },
+    { x: 2824, y: 137, w: 96, h: 127 },
+    { x: 2976, y: 11, w: 64, h: 49 },
+    { x: 3140, y: 12, w: 32, h: 50 },
+    { x: 2989, y: 140, w: 135, h: 115 },
+    { x: 3123, y: 117, w: 58, h: 115 },
+    { x: 3167, y: 95, w: 121, h: 110 },
+    { x: 3274, y: 4, w: 43, h: 122 },
+    { x: 3404, y: 14, w: 78, h: 130 },
+    { x: 3515, y: 11, w: 330, h: 221 },
+    { x: 3832, y: 11, w: 158, h: 273 },
+    { x: 3721, y: 252, w: 136, h: 102 },
+    { x: 3565, y: 222, w: 178, h: 97 },
+    { x: 3643, y: 282, w: 100, h: 77 },
+    { x: 3385, y: 223, w: 135, h: 62 },
+    { x: 3535, y: 392, w: 19, h: 48 },
+    { x: 3550, y: 411, w: 59, h: 50 },
+    { x: 3609, y: 440, w: 55, h: 265 },
+    { x: 3663, y: 516, w: 99, h: 167 },
+    { x: 3533, y: 584, w: 77, h: 170 },
+    { x: 3462, y: 649, w: 67, h: 132 },
+    { x: 3381, y: 697, w: 91, h: 338 },
+    { x: 3235, y: 762, w: 143, h: 267 },
+    { x: 3470, y: 796, w: 75, h: 284 },
+    { x: 3553, y: 968, w: 177, h: 102 },
+    { x: 3725, y: 954, w: 119, h: 76 },
+    { x: 3759, y: 903, w: 78, h: 67 },
+    { x: 3545, y: 1080, w: 73, h: 77 },
+    { x: 3592, y: 1190, w: 142, h: 99 },
+    { x: 3602, y: 1141, w: 83, h: 56 },
+    { x: 3737, y: 1223, w: 37, h: 76 },
+    { x: 3855, y: 1248, w: 133, h: 45 },
+    { x: 3962, y: 439, w: 27, h: 34 },
+    { x: 3923, y: 336, w: 25, h: 19 },
+    { x: 3017, y: 1009, w: 19, h: 135 },
+    { x: 3875, y: 1631, w: 43, h: 113 },
+    { x: 3747, y: 1857, w: 74, h: 136 },
+    { x: 3816, y: 1896, w: 90, h: 117 },
+    { x: 3909, y: 1953, w: 83, h: 98 },
+    { x: 3885, y: 2108, w: 48, h: 40 },
+    { x: 3828, y: 2188, w: 37, h: 27 },
+    { x: 3571, y: 2150, w: 23, h: 13 },
+    { x: 3687, y: 2155, w: 20, h: 18 },
+    { x: 3868, y: 2293, w: 25, h: 31 },
+    { x: 3864, y: 2603, w: 121, h: 81 },
+    { x: 3759, y: 2593, w: 128, h: 46 },
+    { x: 3666, y: 3031, w: 35, h: 121 },
+    { x: 3110, y: 2770, w: 29, h: 111 },
+    { x: 3872, y: 3100, w: 27, h: 130 },
+    { x: 3799, y: 3308, w: 92, h: 11 },
+    { x: 3769, y: 3318, w: 26, h: 220 },
+    { x: 3784, y: 3410, w: 208, h: 163 },
+    { x: 3672, y: 3691, w: 100, h: 97 },
+    { x: 3158, y: 3450, w: 106, h: 48 },
+    { x: 3023, y: 3496, w: 90, h: 50 },
+    { x: 3248, y: 3681, w: 46, h: 113 },
+    { x: 3345, y: 3506, w: 24, h: 25 },
+    { x: 3570, y: 3548, w: 36, h: 25 },
+    { x: 3520, y: 3340, w: 31, h: 31 },
+    { x: 3520, y: 3642, w: 29, h: 39 },
+    { x: 3878, y: 3879, w: 115, h: 103 },
+    { x: 3960, y: 3787, w: 18, h: 34 },
+    { x: 3938, y: 3666, w: 31, h: 68 },
+    { x: 3359, y: 3957, w: 228, h: 32 },
+    { x: 3949, y: 2757, w: 44, h: 200 },
+    { x: 3135, y: 2584, w: 35, h: 24 },
+    { x: 8, y: 3896, w: 154, h: 90 },
+    { x: 13, y: 3788, w: 42, h: 153 },
+    { x: 6, y: 3584, w: 17, h: 158 },
+    { x: 227, y: 1903, w: 54, h: 46 },
+    { x: 323, y: 320, w: 34, h: 21 },
+];
+
+function checkCollision(x, y, size) {
+    const radius = size / 2.5;
+    for (let wall of walls) {
+        if (x + radius > wall.x && x - radius < wall.x + wall.w &&
+            y + radius > wall.y && y - radius < wall.y + wall.h) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// PARAMETRY POSTACI
+let player = { 
+    x: 2000, y: 2000,
+    baseSpeed: 3.8,
+    speed: 3.8,
+    size: 28,
+    spriteWidth: 48,
+    spriteHeight: 48,
+    currentFrame: 0,
+    currentDirection: 0,
+    isMoving: false,
+    animSpeed: 8,
+    animCounter: 0,
+    stamina: 100,
+    maxStamina: 100
+};
+
+let pokemons = [];
+let activeEffects = [];
+let staminaBalls = [];
+let score = 0;
+let startTime = null;
+let elapsedTime = 0;
+
+const boyBox = { x: 230, y: 110, w: 240, h: 580 };
+const girlBox = { x: 620, y: 110, w: 240, h: 580 };
+
+// ============================================================
+// OBSŁUGA KLIKNIĘĆ
+// ============================================================
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    let clientX, clientY;
+    if (e.touches) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+        e.preventDefault();
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+    };
+}
+
+function handleCanvasClick(e) {
+    const coords = getCanvasCoords(e);
+    const screenX = coords.x;
+    const screenY = coords.y;
+
+    if (gameState === 'LOGO') {
+        gameState = 'MENU';
+        return;
+    }
+
+    if (gameState === 'MENU') {
+        if (screenX >= boyBox.x && screenX <= boyBox.x + boyBox.w &&
+            screenY >= boyBox.y && screenY <= boyBox.y + boyBox.h) {
+            activePlayerSprite = imgRuchChlopca;
+            startGame();
+        }
+        else if (screenX >= girlBox.x && screenX <= girlBox.x + girlBox.w &&
+                 screenY >= girlBox.y && screenY <= girlBox.y + girlBox.h) {
+            activePlayerSprite = imgRuchDziewczyny;
+            startGame();
+        }
+        return;
+    }
+
+    if (gameState === 'PLAYING') {
+        playSound(slashSound);
+
+        activeEffects.push({
+            type: 'CLICK',
+            followPlayer: true,
+            direction: player.currentDirection,
+            currentFrame: 0,
+            animCounter: 0,
+            animSpeed: 4
+        });
+
+        let closestMon = null;
+        let minDistance = 70;
+        pokemons.forEach(mon => {
+            if (mon.caught) return;
+            const dist = Math.hypot(player.x - mon.x, player.y - mon.y);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestMon = mon;
+            }
+        });
+
+        if (closestMon) {
+            closestMon.caught = true;
+            playSound(disappearSound);
+            
+            activeEffects.push({
+                type: 'DISAPPEAR',
+                x: closestMon.x, y: closestMon.y,
+                currentFrame: 0, animCounter: 0, animSpeed: 5
+            });
+
+            staminaBalls.push({
+                x: closestMon.x, y: closestMon.y,
+                currentFrame: 0, animCounter: 0, animSpeed: 6
+            });
+
+            score++;
+            statusScore.textContent = score + '/10';
+            
+            if (score >= 10) {
+                gameState = 'GAMEOVER';
+                bgMusic.pause();
+            }
+        }
+    }
+}
+
+canvas.addEventListener('mousedown', handleCanvasClick);
+canvas.addEventListener('touchstart', handleCanvasClick, { passive: false });
+
+// Klawisz na LOGO
+window.addEventListener("keydown", function(e) {
+    if (gameState === 'LOGO') gameState = 'MENU';
+});
+
+// ============================================================
+// FUNKCJE GRY
+// ============================================================
+function startGame() {
+    pokemons = [];
+    activeEffects = [];
+    staminaBalls = [];
+    score = 0;
+    gameState = 'PLAYING';
+    startTime = Date.now();
+    elapsedTime = 0;
+    
+    statusScore.textContent = '0/10';
+    statusTimer.textContent = '0.00s';
+    
+    statusBar.classList.add('active');
+    touchControls.classList.add('active');
+    
+    player.x = 2000;
+    player.y = 2000;
+    player.currentDirection = 0;
+    player.currentFrame = 0;
+    player.isMoving = false;
+    player.stamina = 100;
+
+    if (soundEnabled) {
+        bgMusic.currentTime = 0;
+        bgMusic.play().catch(e => {});
+    }
+
+    for (let i = 0; i < 10; i++) {
+        let rx, ry, safety = 0;
+        do {
+            rx = Math.random() * (WORLD_WIDTH - 200) + 100;
+            ry = Math.random() * (WORLD_HEIGHT - 200) + 100;
+            safety++;
+        } while (checkCollision(rx, ry, 24) && safety < 100);
+
+        let vx = (Math.random() - 0.5) * 2.0;
+        let vy = (Math.random() - 0.5) * 2.0;
+
+        let initialDir = 0;
+        if (Math.abs(vx) > Math.abs(vy)) {
+            initialDir = vx > 0 ? 2 : 1;
+        } else {
+            initialDir = vy > 0 ? 0 : 3;
+        }
+
+        pokemons.push({
+            x: rx, y: ry,
+            vx: vx, vy: vy,
+            baseVx: vx, baseVy: vy,
+            caught: false,
+            currentDirection: initialDir,
+            currentFrame: Math.floor(Math.random() * 4),
+            animCounter: 0,
+            animSpeed: 10 + Math.floor(Math.random() * 5)
+        });
+    }
+}
+
+function resetToMenu() {
+    gameState = 'MENU';
+    score = 0;
+    elapsedTime = 0;
+    statusScore.textContent = '0/10';
+    statusTimer.textContent = '0.00s';
+    
+    statusBar.classList.remove('active');
+    touchControls.classList.remove('active');
+    
+    bgMusic.pause();
+}
+
+// ============================================================
+// UPDATE
+// ============================================================
+function update() {
+    if (gameState !== 'PLAYING') return;
+
+    elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+    statusTimer.textContent = elapsedTime + 's';
+
+    player.isMoving = (keys.w || keys.s || keys.a || keys.d);
+
+    if (player.isMoving) {
+        player.stamina = Math.max(0, player.stamina - 0.15);
+    } else {
+        player.stamina = Math.min(player.maxStamina, player.stamina + 0.30);
+    }
+
+    if (player.stamina > 60) {
+        player.speed = player.baseSpeed;
+    } else if (player.stamina > 20) {
+        player.speed = player.baseSpeed * 0.75;
+    } else {
+        player.speed = player.baseSpeed * 0.58;
+    }
+
+    statusStaminaBar.style.width = player.stamina + '%';
+    statusStaminaText.textContent = Math.round(player.stamina);
+    if (player.stamina > 60) {
+        statusStaminaBar.style.backgroundColor = '#2ecc71';
+    } else if (player.stamina > 20) {
+        statusStaminaBar.style.backgroundColor = '#f1c40f';
+    } else {
+        statusStaminaBar.style.backgroundColor = '#e74c3c';
+    }
+
+    let nx = player.x, ny = player.y;
+
+    if (keys.w) { ny -= player.speed; player.currentDirection = 3; }
+    else if (keys.s) { ny += player.speed; player.currentDirection = 0; }
+    if (keys.a) { nx -= player.speed; player.currentDirection = 1; }
+    else if (keys.d) { nx += player.speed; player.currentDirection = 2; }
+
+    if (!checkCollision(nx, ny, player.size)) {
+        player.x = nx;
+        player.y = ny;
+    } else {
+        if (!checkCollision(nx, player.y, player.size)) player.x = nx;
+        else if (!checkCollision(player.x, ny, player.size)) player.y = ny;
+    }
+
+    camera.x = player.x - camera.width / 2;
+    camera.y = player.y - camera.height / 2;
+    if (camera.x < 0) camera.x = 0;
+    if (camera.y < 0) camera.y = 0;
+    if (camera.x > WORLD_WIDTH - camera.width) camera.x = WORLD_WIDTH - camera.width;
+    if (camera.y > WORLD_HEIGHT - camera.height) camera.y = WORLD_HEIGHT - camera.height;
+
+    if (player.isMoving) {
+        player.animCounter++;
+        let currentAnimSpeed = player.stamina < 20 ? 15 : player.animSpeed;
+        if (player.animCounter >= currentAnimSpeed) {
+            player.animCounter = 0;
+            player.currentFrame = (player.currentFrame + 1) % 4;
+        }
+    } else {
+        player.currentFrame = 0;
+    }
+
+    for (let i = staminaBalls.length - 1; i >= 0; i--) {
+        const ball = staminaBalls[i];
+        ball.animCounter++;
+        if (ball.animCounter >= ball.animSpeed) {
+            ball.animCounter = 0;
+            ball.currentFrame = (ball.currentFrame + 1) % 5;
+        }
+        const dist = Math.hypot(player.x - ball.x, player.y - ball.y);
+        if (dist < 26) {
+            player.stamina = Math.min(player.maxStamina, player.stamina + 20);
+            staminaBalls.splice(i, 1);
+        }
+    }
+
+    pokemons.forEach(mon => {
+        if (mon.caught) return;
+
+        const dx = mon.x - player.x;
+        const dy = mon.y - player.y;
+        const dist = Math.hypot(dx, dy);
+
+        let targetVx = mon.baseVx;
+        let targetVy = mon.baseVy;
+
+        if (dist < 150) {
+            const angle = Math.atan2(dy, dx);
+            const runSpeed = 3.5;
+            targetVx = Math.cos(angle) * runSpeed;
+            targetVy = Math.sin(angle) * runSpeed;
+        }
+
+        mon.vx += (targetVx - mon.vx) * 0.1;
+        mon.vy += (targetVy - mon.vy) * 0.1;
+
+        let nextX = mon.x + mon.vx;
+        let nextY = mon.y + mon.vy;
+
+        if (checkCollision(nextX, mon.y, 24)) {
+            mon.vx *= -1;
+            mon.baseVx *= -1;
+            nextX = mon.x + mon.vx;
+        }
+        if (checkCollision(mon.x, nextY, 24)) {
+            mon.vy *= -1;
+            mon.baseVy *= -1;
+            nextY = mon.y + mon.vy;
+        }
+
+        mon.x = nextX;
+        mon.y = nextY;
+
+        if (Math.abs(mon.vx) > Math.abs(mon.vy)) {
+            mon.currentDirection = mon.vx > 0 ? 2 : 1;
+        } else {
+            mon.currentDirection = mon.vy > 0 ? 0 : 3;
+        }
+
+        mon.animCounter++;
+        let pmAnimSpeed = dist < 150 ? 5 : mon.animSpeed;
+        if (mon.animCounter >= pmAnimSpeed) {
+            mon.animCounter = 0;
+            mon.currentFrame = (mon.currentFrame + 1) % 4;
+        }
+    });
+
+    for (let i = activeEffects.length - 1; i >= 0; i--) {
+        let eff = activeEffects[i];
+        eff.animCounter++;
+        if (eff.animCounter >= eff.animSpeed) {
+            eff.animCounter = 0;
+            eff.currentFrame++;
+            if (eff.currentFrame >= 5) {
+                activeEffects.splice(i, 1);
+            }
+        }
+    }
+}
+
+// ============================================================
+// DRAW
+// ============================================================
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // LOGO
+    if (gameState === 'LOGO') {
+        ctx.fillStyle = "#1a1a2e";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (logoLoaded && imgLogo.complete && imgLogo.width > 0) {
+            const logoX = (canvas.width - imgLogo.width) / 2;
+            const logoY = (canvas.height - imgLogo.height) / 2;
+            ctx.drawImage(imgLogo, logoX, logoY, imgLogo.width, imgLogo.height);
+        } else {
+            ctx.fillStyle = "#f1c40f";
+            ctx.font = "bold 60px 'Courier New', Courier, monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("DOKEMON", canvas.width / 2, canvas.height / 2 - 30);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 24px 'Courier New', Courier, monospace";
+            ctx.fillText("Kliknij aby rozpocząć", canvas.width / 2, canvas.height / 2 + 50);
+        }
+        return;
+    }
+
+    // MENU
+    if (gameState === 'MENU') {
+        if (imgMenuBg.complete && imgMenuBg.width > 0) {
+            ctx.drawImage(imgMenuBg, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = "#1e1e24";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        if (imgImieBohatera.complete) ctx.drawImage(imgImieBohatera, 253, 110, 193, 104);
+        if (imgImieBohaterki.complete) ctx.drawImage(imgImieBohaterki, 643, 110, 193, 104);
+        if (imgChlopiecLarge.complete) ctx.drawImage(imgChlopiecLarge, boyBox.x, 210, 240, 480);
+        if (imgDziewczynaLarge.complete) ctx.drawImage(imgDziewczynaLarge, girlBox.x, 210, 240, 480);
+        if (imgWybierzBohatera.complete) ctx.drawImage(imgWybierzBohatera, 231, 20, 638, 97);
+        return;
+    }
+
+    // GRA
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
+
+    // Tło - rysujemy tylko jeśli obrazek jest dostępny
+    if (!useFallbackBg && imgBackground.complete && imgBackground.width > 0) {
+        ctx.drawImage(imgBackground, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    } else {
+        // Jeśli nie ma tła, canvas jest przezroczysty i widać background.png
+        // Nie rysujemy nic - tło z CSS jest widoczne
+    }
+
+    // Kulki
+    staminaBalls.forEach(ball => {
+        if (imgKulka.complete && imgKulka.width > 0) {
+            const ballSx = ball.currentFrame * 48;
+            ctx.drawImage(imgKulka, ballSx, 0, 48, 48, ball.x - 24, ball.y - 24, 48, 48);
+        }
+    });
+
+    // Pokemony
+    pokemons.forEach((mon, i) => {
+        if (mon.caught) return;
+        if (pokemonImages[i] && pokemonImages[i].complete && pokemonImages[i].width > 0) {
+            const pmSx = mon.currentFrame * 48;
+            const pmSy = mon.currentDirection * 48;
+            ctx.drawImage(pokemonImages[i], pmSx, pmSy, 48, 48, mon.x - 24, mon.y - 24, 48, 48);
+        }
+    });
+
+    // Efekty
+    activeEffects.forEach(eff => {
+        const effSx = eff.currentFrame * 48;
+        if (eff.type === 'DISAPPEAR' && imgZnikniecie.complete && imgZnikniecie.width > 0) {
+            ctx.drawImage(imgZnikniecie, effSx, 0, 48, 48, eff.x - 24, eff.y - 24, 48, 48);
+        } else if (eff.type === 'CLICK' && imgKlikniecie.complete && imgKlikniecie.width > 0) {
+            let dx = player.x, dy = player.y;
+            if (eff.direction === 0) dy += 15;
+            else if (eff.direction === 1) dx -= 15;
+            else if (eff.direction === 2) dx += 15;
+            else if (eff.direction === 3) dy -= 15;
+            ctx.drawImage(imgKlikniecie, effSx, 0, 48, 48, dx - 24, dy - 24, 48, 48);
+        }
+    });
+
+    // GRACZ
+    const sx = player.currentFrame * player.spriteWidth;
+    const sy = player.currentDirection * player.spriteHeight;
+    ctx.drawImage(activePlayerSprite, sx, sy, player.spriteWidth, player.spriteHeight, player.x - 24, player.y - 24, 48, 48);
+
+    // Wierzchołki drzew
+    if (!useFallbackTop && imgTopLayer.complete && imgTopLayer.width > 0) {
+        ctx.drawImage(imgTopLayer, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    }
+
+    ctx.restore();
+
+    // GAMEOVER
+    if (gameState === 'GAMEOVER') {
+        if (finishLoaded && imgFinish.complete && imgFinish.width > 0) {
+            const fx = (canvas.width - imgFinish.width) / 2;
+            const fy = (canvas.height - imgFinish.height) / 2;
+            ctx.drawImage(imgFinish, fx, fy, imgFinish.width, imgFinish.height);
+        } else {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#f1c40f";
+        ctx.font = "bold 80px 'Courier New', Courier, monospace";
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 20;
+        ctx.fillText(elapsedTime + "s", canvas.width / 2, canvas.height / 2 + 10);
+        ctx.shadowBlur = 0;
+    }
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
