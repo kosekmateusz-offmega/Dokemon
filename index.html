@@ -431,7 +431,7 @@ function playSound(audioElement) {
 }
 
 // ============================================================
-// KOD GRY
+// KOD GRY - WSZYSTKIE NAZWY PLIKÓW MAŁE LITERY
 // ============================================================
 const WORLD_WIDTH = 4000;
 const WORLD_HEIGHT = 4000;
@@ -442,19 +442,19 @@ const statusTimer = document.getElementById('statusTimer');
 const statusStaminaBar = document.getElementById('statusStaminaBar');
 const statusStaminaText = document.getElementById('statusStaminaText');
 
-// GRAFIKA
+// GRAFIKA - WSZYSTKIE NAZWY MAŁE LITERY
 let useFallbackBg = false;
 const imgBackground = new Image();
-imgBackground.src = "Tlo_4000px.png";
+imgBackground.src = "tlo_4000px.png";
 imgBackground.onerror = () => { useFallbackBg = true; };
 
 const imgTopLayer = new Image();
-imgTopLayer.src = "Tlo_4000px_top.png";
+imgTopLayer.src = "tlo_4000px_top.png";
 let useFallbackTop = false;
 imgTopLayer.onerror = () => { useFallbackTop = true; };
 
 const imgLogo = new Image();
-imgLogo.src = "Tla_logo.png";
+imgLogo.src = "tla_logo.png";
 let logoLoaded = false;
 imgLogo.onload = () => { logoLoaded = true; };
 imgLogo.onerror = () => { logoLoaded = false; };
@@ -490,7 +490,7 @@ imgKulka.src = "kulka.png";
 const pokemonImages = [];
 for (let i = 1; i <= 10; i++) {
     const img = new Image();
-    img.src = "Pokemon" + i + "_48px.png";
+    img.src = "pokemon" + i + "_48px.png";
     pokemonImages.push(img);
 }
 
@@ -516,7 +516,7 @@ let camera = {
     height: 700
 };
 
-// ŚCIANY - TUTAJ WCKLEJ CAŁĄ LISTĘ WALLS
+// ŚCIANY - TUTAJ WCKLEJ CAŁĄ LISTĘ
 const walls = [
     // 1. Zewnętrzne ściany świata
     { x: 0, y: 0, w: WORLD_WIDTH, h: 30 },
@@ -981,7 +981,7 @@ const boyBox = { x: 230, y: 110, w: 240, h: 580 };
 const girlBox = { x: 620, y: 110, w: 240, h: 580 };
 
 // ============================================================
-// OBSŁUGA KLIKNIĘĆ - POPRAWIONA!
+// OBSŁUGA KLIKNIĘĆ
 // ============================================================
 function getCanvasCoords(e) {
     const rect = canvas.getBoundingClientRect();
@@ -1013,10 +1013,20 @@ function handleCanvasClick(e) {
     }
 
     if (gameState === 'MENU') {
-        // ROZSZERZONY OBSZAR KLIKALNY - cały ekran!
-        // Kliknięcie gdziekolwiek uruchamia grę (domyślnie chłopiec)
-        activePlayerSprite = imgRuchChlopca;
-        startGame();
+        // Sprawdź czy kliknięto w chłopca
+        if (screenX >= boyBox.x && screenX <= boyBox.x + boyBox.w &&
+            screenY >= boyBox.y && screenY <= boyBox.y + boyBox.h) {
+            activePlayerSprite = imgRuchChlopca;
+            startGame();
+            return;
+        }
+        // Sprawdź czy kliknięto w dziewczynę
+        if (screenX >= girlBox.x && screenX <= girlBox.x + girlBox.w &&
+            screenY >= girlBox.y && screenY <= girlBox.y + girlBox.h) {
+            activePlayerSprite = imgRuchDziewczyny;
+            startGame();
+            return;
+        }
         return;
     }
 
@@ -1322,7 +1332,7 @@ function draw() {
         return;
     }
 
-    // MENU - NADAL RYSUJEMY, ALE KLIKNIĘCIE WSZĘDZIE PRZECHODZI DO GRY
+    // MENU
     if (gameState === 'MENU') {
         if (imgMenuBg.complete && imgMenuBg.width > 0) {
             ctx.drawImage(imgMenuBg, 0, 0, canvas.width, canvas.height);
@@ -1330,11 +1340,28 @@ function draw() {
             ctx.fillStyle = "#1e1e24";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-        if (imgImieBohatera.complete) ctx.drawImage(imgImieBohatera, 253, 110, 193, 104);
-        if (imgImieBohaterki.complete) ctx.drawImage(imgImieBohaterki, 643, 110, 193, 104);
-        if (imgChlopiecLarge.complete) ctx.drawImage(imgChlopiecLarge, boyBox.x, 210, 240, 480);
-        if (imgDziewczynaLarge.complete) ctx.drawImage(imgDziewczynaLarge, girlBox.x, 210, 240, 480);
-        if (imgWybierzBohatera.complete) ctx.drawImage(imgWybierzBohatera, 231, 20, 638, 97);
+        if (imgImieBohatera.complete && imgImieBohatera.width > 0) {
+            ctx.drawImage(imgImieBohatera, 253, 110, 193, 104);
+        }
+        if (imgImieBohaterki.complete && imgImieBohaterki.width > 0) {
+            ctx.drawImage(imgImieBohaterki, 643, 110, 193, 104);
+        }
+        if (imgChlopiecLarge.complete && imgChlopiecLarge.width > 0) {
+            ctx.drawImage(imgChlopiecLarge, boyBox.x, 210, 240, 480);
+        }
+        if (imgDziewczynaLarge.complete && imgDziewczynaLarge.width > 0) {
+            ctx.drawImage(imgDziewczynaLarge, girlBox.x, 210, 240, 480);
+        }
+        if (imgWybierzBohatera.complete && imgWybierzBohatera.width > 0) {
+            ctx.drawImage(imgWybierzBohatera, 231, 20, 638, 97);
+        } else {
+            // Fallback - napis
+            ctx.fillStyle = "#f1c40f";
+            ctx.font = "bold 36px 'Courier New', Courier, monospace";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillText("WYBIERZ BOHATERA", canvas.width / 2, 25);
+        }
         return;
     }
 
