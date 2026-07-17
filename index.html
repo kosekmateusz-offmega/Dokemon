@@ -31,7 +31,6 @@
         flex-direction:column;
     }
     
-    /* PASEK STATUSU - UKRYTY DOMYŚLNIE */
     #statusBar {
         width: 100%;
         max-width: 1100px;
@@ -131,7 +130,6 @@
         font-weight: bold;
     }
     
-    /* Przyciski - obrazki */
     .btn-icon {
         background: transparent;
         border: none;
@@ -166,13 +164,11 @@
         width:100%;
         max-width:1100px;
         aspect-ratio:1100/700;
-        /* TŁO CAŁEJ GRY - powielana tekstura */
         background-image: url('background.png');
         background-size: 220px 220px;
         background-repeat: repeat;
     }
     
-    /* Gdy pasek jest aktywny, gra traci zaokrąglenie u góry */
     #statusBar.active + #gameContainer {
         border-radius: 0 0 8px 8px;
         border-top: none;
@@ -182,14 +178,13 @@
         display:block;
         width:100%;
         height:100%;
-        background:transparent; /* Zmienione z #111 na transparent */
+        background:transparent;
         touch-action:none;
         cursor:pointer;
         image-rendering:pixelated;
         object-fit:contain;
     }
     
-    /* Kontrolery dotykowe - UKRYTE DOMYŚLNIE, POKAZUJĄ SIĘ TYLKO W GRZE */
     #touchControls {
         position:absolute;
         bottom:50px;
@@ -264,7 +259,6 @@
 <body>
 
 <div id="gameWrapper">
-    <!-- PASEK STATUSU -->
     <div id="statusBar">
         <div class="status-content">
             <div class="left-section">
@@ -311,9 +305,15 @@
 </div>
 
 <!-- DŹWIĘKI -->
-<audio id="bgMusic" loop><source src="moja_melodia.mp3" type="audio/mpeg"></audio>
-<audio id="slashSound"><source src="ciach.mp3" type="audio/mpeg"></audio>
-<audio id="disappearSound"><source src="znikniecie.mp3" type="audio/mpeg"></audio>
+<audio id="bgMusic" loop>
+    <source src="moja_melodia.mp3" type="audio/mpeg">
+</audio>
+<audio id="slashSound">
+    <source src="ciach.mp3" type="audio/mpeg">
+</audio>
+<audio id="disappearSound">
+    <source src="znikniecie.mp3" type="audio/mpeg">
+</audio>
 
 <script>
 // ============================================================
@@ -329,7 +329,6 @@ const touchControls = document.getElementById('touchControls');
 
 const keys = { w:false, a:false, s:false, d:false };
 
-// Joystick
 function updateJoystick(e) {
     e.preventDefault();
     const touch = e.touches ? e.touches[0] : e;
@@ -378,7 +377,6 @@ joystickZone.addEventListener('touchend', e => {
 }, {passive:false});
 joystickZone.addEventListener('touchcancel', resetJoystick, {passive:false});
 
-// Myszka
 let mouseJoy = false;
 joystickZone.addEventListener('mousedown', e => {
     mouseJoy = true;
@@ -391,7 +389,6 @@ document.addEventListener('mouseup', () => {
     if (mouseJoy) { mouseJoy = false; resetJoystick(); }
 });
 
-// Przycisk ataku
 function doAttack(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -405,7 +402,6 @@ function doAttack(e) {
 actionBtn.addEventListener('touchstart', doAttack, {passive:false});
 actionBtn.addEventListener('mousedown', doAttack);
 
-// Klawiatura
 document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
@@ -440,7 +436,6 @@ function playSound(audioElement) {
 const WORLD_WIDTH = 4000;
 const WORLD_HEIGHT = 4000;
 
-// REFERENCJE STATUSU
 const statusBar = document.getElementById('statusBar');
 const statusScore = document.getElementById('statusScore');
 const statusTimer = document.getElementById('statusTimer');
@@ -513,11 +508,8 @@ const imgRuchDziewczyny = new Image();
 imgRuchDziewczyny.src = "ruchdziewczyny.png";
 
 let activePlayerSprite = imgRuchChlopca;
-
-// STANY GRY
 let gameState = 'LOGO';
 
-// KAMERA
 let camera = {
     x: 0, y: 0,
     width: 1100,
@@ -962,7 +954,6 @@ function checkCollision(x, y, size) {
     return false;
 }
 
-// PARAMETRY POSTACI
 let player = { 
     x: 2000, y: 2000,
     baseSpeed: 3.8,
@@ -990,7 +981,7 @@ const boyBox = { x: 230, y: 110, w: 240, h: 580 };
 const girlBox = { x: 620, y: 110, w: 240, h: 580 };
 
 // ============================================================
-// OBSŁUGA KLIKNIĘĆ
+// OBSŁUGA KLIKNIĘĆ - POPRAWIONA!
 // ============================================================
 function getCanvasCoords(e) {
     const rect = canvas.getBoundingClientRect();
@@ -1022,16 +1013,10 @@ function handleCanvasClick(e) {
     }
 
     if (gameState === 'MENU') {
-        if (screenX >= boyBox.x && screenX <= boyBox.x + boyBox.w &&
-            screenY >= boyBox.y && screenY <= boyBox.y + boyBox.h) {
-            activePlayerSprite = imgRuchChlopca;
-            startGame();
-        }
-        else if (screenX >= girlBox.x && screenX <= girlBox.x + girlBox.w &&
-                 screenY >= girlBox.y && screenY <= girlBox.y + girlBox.h) {
-            activePlayerSprite = imgRuchDziewczyny;
-            startGame();
-        }
+        // ROZSZERZONY OBSZAR KLIKALNY - cały ekran!
+        // Kliknięcie gdziekolwiek uruchamia grę (domyślnie chłopiec)
+        activePlayerSprite = imgRuchChlopca;
+        startGame();
         return;
     }
 
@@ -1087,7 +1072,6 @@ function handleCanvasClick(e) {
 canvas.addEventListener('mousedown', handleCanvasClick);
 canvas.addEventListener('touchstart', handleCanvasClick, { passive: false });
 
-// Klawisz na LOGO
 window.addEventListener("keydown", function(e) {
     if (gameState === 'LOGO') gameState = 'MENU';
 });
@@ -1338,7 +1322,7 @@ function draw() {
         return;
     }
 
-    // MENU
+    // MENU - NADAL RYSUJEMY, ALE KLIKNIĘCIE WSZĘDZIE PRZECHODZI DO GRY
     if (gameState === 'MENU') {
         if (imgMenuBg.complete && imgMenuBg.width > 0) {
             ctx.drawImage(imgMenuBg, 0, 0, canvas.width, canvas.height);
@@ -1358,15 +1342,10 @@ function draw() {
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // Tło - rysujemy tylko jeśli obrazek jest dostępny
     if (!useFallbackBg && imgBackground.complete && imgBackground.width > 0) {
         ctx.drawImage(imgBackground, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    } else {
-        // Jeśli nie ma tła, canvas jest przezroczysty i widać background.png
-        // Nie rysujemy nic - tło z CSS jest widoczne
     }
 
-    // Kulki
     staminaBalls.forEach(ball => {
         if (imgKulka.complete && imgKulka.width > 0) {
             const ballSx = ball.currentFrame * 48;
@@ -1374,7 +1353,6 @@ function draw() {
         }
     });
 
-    // Pokemony
     pokemons.forEach((mon, i) => {
         if (mon.caught) return;
         if (pokemonImages[i] && pokemonImages[i].complete && pokemonImages[i].width > 0) {
@@ -1384,7 +1362,6 @@ function draw() {
         }
     });
 
-    // Efekty
     activeEffects.forEach(eff => {
         const effSx = eff.currentFrame * 48;
         if (eff.type === 'DISAPPEAR' && imgZnikniecie.complete && imgZnikniecie.width > 0) {
@@ -1399,19 +1376,16 @@ function draw() {
         }
     });
 
-    // GRACZ
     const sx = player.currentFrame * player.spriteWidth;
     const sy = player.currentDirection * player.spriteHeight;
     ctx.drawImage(activePlayerSprite, sx, sy, player.spriteWidth, player.spriteHeight, player.x - 24, player.y - 24, 48, 48);
 
-    // Wierzchołki drzew
     if (!useFallbackTop && imgTopLayer.complete && imgTopLayer.width > 0) {
         ctx.drawImage(imgTopLayer, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     }
 
     ctx.restore();
 
-    // GAMEOVER
     if (gameState === 'GAMEOVER') {
         if (finishLoaded && imgFinish.complete && imgFinish.width > 0) {
             const fx = (canvas.width - imgFinish.width) / 2;
